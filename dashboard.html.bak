@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PartBridge — Supplier Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; border-bottom: 0.5px solid #1e1e1e; background: #0a0a0a; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-size: 15px; font-weight: 500; color: #fff; cursor: pointer; }
+    .nav-logo span { color: #22c55e; }
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-user { font-size: 13px; color: #666; }
+    .nav-btn { font-size: 12px; padding: 6px 16px; border-radius: 6px; border: 0.5px solid #333; background: transparent; color: #e8e8e8; cursor: pointer; font-family: inherit; }
+
+    .main { max-width: 1000px; margin: 0 auto; padding: 32px 40px; }
+    .page-title { font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+    .page-sub { font-size: 13px; color: #666; margin-bottom: 28px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: #0e0e0e; border: 0.5px solid #1e1e1e; border-radius: 10px; padding: 16px; }
+    .stat-card-num { font-size: 22px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+    .stat-card-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 0.3px; }
+
+    .section { background: #0e0e0e; border: 0.5px solid #1e1e1e; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-size: 13px; font-weight: 500; color: #e8e8e8; }
+    .section-action { font-size: 12px; color: #22c55e; cursor: pointer; background: none; border: none; font-family: inherit; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .field input, .field select { width: 100%; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 6px; padding: 9px 12px; color: #e8e8e8; font-size: 13px; font-family: inherit; }
+    .field input:focus, .field select:focus { outline: none; border-color: #22c55e; }
+    .field input::placeholder { color: #444; }
+    .field input.mono { font-family: 'Courier New', monospace; text-transform: uppercase; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .field-hint { font-size: 11px; color: #555; margin-top: 4px; }
+
+    .part-preview { background: #141414; border: 0.5px solid #1e1e1e; border-radius: 6px; padding: 12px; margin-bottom: 14px; display: none; }
+    .part-preview.visible { display: block; }
+    .pp-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+    .pp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pp-field label { font-size: 10px; color: #555; display: block; margin-bottom: 2px; }
+    .pp-field span { font-size: 12px; color: #e8e8e8; }
+
+    .input-row { display: flex; gap: 8px; }
+    .input-row input { flex: 1; }
+    .lookup-btn { background: transparent; border: 0.5px solid #2a2a2a; border-radius: 6px; padding: 9px 14px; font-size: 12px; color: #888; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .lookup-btn:hover { background: #141414; }
+
+    .submit-btn { background: #22c55e; color: #000; border: none; border-radius: 8px; padding: 10px 24px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .submit-btn:hover { background: #16a34a; }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status { font-size: 12px; padding: 10px 12px; border-radius: 6px; margin-top: 12px; display: none; }
+    .status.success { display: block; background: #0d1f0d; color: #22c55e; border: 0.5px solid #166534; }
+    .status.error { display: block; background: #1f0d0d; color: #f87171; border: 0.5px solid #991b1b; }
+    .status.loading { display: block; background: #141414; color: #888; border: 0.5px solid #2a2a2a; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { font-size: 11px; color: #555; font-weight: 500; text-align: left; padding: 8px 10px; border-bottom: 0.5px solid #1e1e1e; }
+    td { padding: 10px 10px; border-bottom: 0.5px solid #141414; color: #e8e8e8; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .mono-sm { font-family: 'Courier New', monospace; font-size: 12px; color: #888; }
+    .badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+    .badge-stocked { background: #0d1f0d; color: #22c55e; }
+    .badge-brokered { background: #1f1000; color: #f97316; }
+    .delete-btn { font-size: 11px; padding: 4px 10px; border-radius: 4px; background: transparent; border: 0.5px solid #2a2a2a; color: #666; cursor: pointer; font-family: inherit; }
+    .delete-btn:hover { border-color: #f87171; color: #f87171; }
+    .empty-state { text-align: center; padding: 40px; color: #555; font-size: 13px; }
+
+    .auth-wall { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 12px; }
+    .auth-wall h2 { font-size: 18px; font-weight: 500; color: #e8e8e8; }
+    .auth-wall p { font-size: 13px; color: #666; }
+    .auth-wall button { background: #22c55e; color: #000; border: none; border-radius: 8px; padding: 10px 24px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="window.location.href='index.html'">Part<span>Bridge</span></div>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser">Loading...</span>
+    <button class="nav-btn" onclick="doSignout()">Sign out</button>
+  </div>
+</nav>
+
+<div class="main" id="mainContent" style="display:none">
+  <div class="page-title">Supplier dashboard</div>
+  <div class="page-sub">Manage your inventory listings and track performance.</div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-card-num" id="statActive">0</div><div class="stat-card-label">Active listings</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="statStocked">0</div><div class="stat-card-label">Stocked</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="statBrokered">0</div><div class="stat-card-label">Brokered</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="statViews">—</div><div class="stat-card-label">Profile views</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Post new listing</div>
+    </div>
+
+    <div class="field">
+      <label>Part number</label>
+      <div class="input-row">
+        <input class="mono" type="text" id="partNumber" placeholder="e.g. TMS320F28335PGFA" oninput="this.value=this.value.toUpperCase()" />
+        <button class="lookup-btn" onclick="lookupPart()">Look up →</button>
+      </div>
+      <div class="field-hint">Include full suffix if applicable — TR, T, REEL</div>
+    </div>
+
+    <div class="part-preview" id="partPreview">
+      <div class="pp-label">✓ Part verified</div>
+      <div class="pp-grid">
+        <div class="pp-field"><label>Manufacturer</label><span id="prev-mfr">—</span></div>
+        <div class="pp-field"><label>Category</label><span id="prev-cat">—</span></div>
+        <div class="pp-field"><label>Package</label><span id="prev-pkg">—</span></div>
+        <div class="pp-field"><label>Description</label><span id="prev-desc">—</span></div>
+      </div>
+    </div>
+
+    <div id="lookupStatus" class="status"></div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Inventory type</label>
+        <select id="inventoryType">
+          <option value="">Select type</option>
+          <option value="stocked">Stocked — physically in stock</option>
+          <option value="brokered">Brokered — sourcing it</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Condition</label>
+        <select id="condition">
+          <option value="Factory New">Factory New</option>
+          <option value="Pulled">Pulled</option>
+          <option value="Reclaimed">Reclaimed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="quantity" placeholder="e.g. 4500" min="1" />
+      </div>
+      <div class="field">
+        <label>Date code</label>
+        <input type="text" id="dateCode" placeholder="e.g. 2023+" class="mono" />
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="submitListing()">Post listing →</button>
+    <div id="submitStatus" class="status"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">Your listings</div>
+      <button class="section-action" onclick="loadListings()">Refresh</button>
+    </div>
+    <div id="listingsTable"><div class="empty-state">Loading your listings...</div></div>
+  </div>
+</div>
+
+<div class="auth-wall" id="authWall" style="display:none">
+  <h2>Supplier access required</h2>
+  <p>Sign in or create a supplier account to manage your listings.</p>
+  <button onclick="window.location.href='signup.html'">Sign in →</button>
+</div>
+
+<script>
+  const { createClient } = supabase
+  const client = createClient('https://zcqfwkbgrevaixqjytzc.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcWZ3a2JncmV2YWl4cWp5dHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDkzMDUsImV4cCI6MjA5NTEyNTMwNX0.euaNHnoN0KoG23IRCBcK2x2K-OgB4opFF9dZRsoFAds')
+  const SUPABASE_URL = 'https://zcqfwkbgrevaixqjytzc.supabase.co'
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcWZ3a2JncmV2YWl4cWp5dHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDkzMDUsImV4cCI6MjA5NTEyNTMwNX0.euaNHnoN0KoG23IRCBcK2x2K-OgB4opFF9dZRsoFAds'
+
+  let currentUser = null
+  let partVerified = false
+
+  async function init() {
+    const { data: { session } } = await client.auth.getSession()
+    if (!session) {
+      document.getElementById('authWall').style.display = 'flex'
+      return
+    }
+    currentUser = session.user
+    document.getElementById('navUser').textContent = currentUser.email
+    document.getElementById('mainContent').style.display = 'block'
+    loadListings()
+  }
+
+  async function doSignout() {
+    await client.auth.signOut()
+    window.location.href = 'index.html'
+  }
+
+  async function lookupPart() {
+    const partNumber = document.getElementById('partNumber').value.trim()
+    if (!partNumber) return
+    const status = document.getElementById('lookupStatus')
+    const preview = document.getElementById('partPreview')
+    status.className = 'status loading'
+    status.textContent = 'Looking up part...'
+    partVerified = false
+    preview.classList.remove('visible')
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/rapid-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+        body: JSON.stringify({ partNumber })
+      })
+      const data = await res.json()
+      if (data.part) {
+        document.getElementById('prev-mfr').textContent = data.part.manufacturer || '—'
+        document.getElementById('prev-cat').textContent = data.part.category || '—'
+        document.getElementById('prev-pkg').textContent = data.part.package || '—'
+        document.getElementById('prev-desc').textContent = data.part.description || '—'
+        preview.classList.add('visible')
+        status.className = 'status'
+        partVerified = true
+      } else {
+        status.className = 'status error'
+        status.textContent = 'Part not found. Check the part number and try again.'
+      }
+    } catch(err) {
+      status.className = 'status error'
+      status.textContent = 'Lookup failed. Please try again.'
+    }
+  }
+
+  async function submitListing() {
+    if (!partVerified) {
+      document.getElementById('lookupStatus').className = 'status error'
+      document.getElementById('lookupStatus').textContent = 'Please look up and verify the part number first.'
+      return
+    }
+    const partNumber = document.getElementById('partNumber').value.trim()
+    const inventoryType = document.getElementById('inventoryType').value
+    const quantity = document.getElementById('quantity').value
+    const dateCode = document.getElementById('dateCode').value
+    const condition = document.getElementById('condition').value
+
+    if (!inventoryType || !quantity) {
+      document.getElementById('submitStatus').className = 'status error'
+      document.getElementById('submitStatus').textContent = 'Please fill in all required fields.'
+      return
+    }
+
+    const btn = document.querySelector('.submit-btn')
+    const status = document.getElementById('submitStatus')
+    btn.disabled = true
+    status.className = 'status loading'
+    status.textContent = 'Posting listing...'
+
+    const { data: { session } } = await client.auth.getSession()
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-listing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ part_number: partNumber, inventory_type: inventoryType, quantity: parseInt(quantity), date_code: dateCode, condition, price_visible: false, price: null })
+      })
+      const data = await res.json()
+      if (data.success) {
+        status.className = 'status success'
+        status.textContent = 'Listing posted successfully.'
+        document.getElementById('partNumber').value = ''
+        document.getElementById('partPreview').classList.remove('visible')
+        document.getElementById('quantity').value = ''
+        document.getElementById('dateCode').value = ''
+        partVerified = false
+        loadListings()
+      } else {
+        throw new Error(data.error || 'Submission failed')
+      }
+    } catch(err) {
+      status.className = 'status error'
+      status.textContent = err.message
+    }
+    btn.disabled = false
+  }
+
+  async function loadListings() {
+    if (!currentUser) return
+    const { data: listings, error } = await client
+      .from('listings')
+      .select('*, parts(part_number, manufacturer, description)')
+      .eq('supplier_id', currentUser.id)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+
+    if (error || !listings) {
+      document.getElementById('listingsTable').innerHTML = '<div class="empty-state">Could not load listings.</div>'
+      return
+    }
+
+    document.getElementById('statActive').textContent = listings.length
+    document.getElementById('statStocked').textContent = listings.filter(l => l.inventory_type === 'stocked').length
+    document.getElementById('statBrokered').textContent = listings.filter(l => l.inventory_type === 'brokered').length
+
+    if (!listings.length) {
+      document.getElementById('listingsTable').innerHTML = '<div class="empty-state">No listings yet. Post your first listing above.</div>'
+      return
+    }
+
+    const rows = listings.map(l => `
+      <tr>
+        <td style="font-family:monospace;font-size:12px">${l.part_number_listed}</td>
+        <td style="font-size:12px;color:#888">${l.parts?.manufacturer || '—'}</td>
+        <td style="font-size:12px;color:#888">${l.date_code || '—'}</td>
+        <td style="font-family:monospace;font-size:13px">${l.quantity?.toLocaleString() || '—'}</td>
+        <td><span class="badge badge-${l.inventory_type}">${l.inventory_type}</span></td>
+        <td style="font-size:11px;color:#555">${new Date(l.created_at).toLocaleDateString()}</td>
+        <td><button class="delete-btn" onclick="deleteListing('${l.id}')">Remove</button></td>
+      </tr>
+    `).join('')
+
+    document.getElementById('listingsTable').innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Part number</th><th>Manufacturer</th><th>DC</th><th>Qty</th><th>Type</th><th>Posted</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `
+  }
+
+  async function deleteListing(id) {
+    if (!confirm('Remove this listing?')) return
+    await client.from('listings').update({ active: false }).eq('id', id)
+    loadListings()
+  }
+
+  init()
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PartBridge — Electronic Component Search</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    /* NAV */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; border-bottom: 0.5px solid #1e1e1e; background: #0a0a0a; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-size: 15px; font-weight: 500; color: #fff; }
+    .nav-logo span { color: #22c55e; }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a { font-size: 13px; color: #666; }
+    .nav-links a:hover { color: #e8e8e8; }
+    .nav-btn { font-size: 12px; padding: 6px 16px; border-radius: 6px; border: 0.5px solid #333; background: transparent; color: #e8e8e8; cursor: pointer; font-family: inherit; }
+    .nav-btn.primary { background: #22c55e; color: #000; border-color: #22c55e; font-weight: 500; }
+
+    /* HERO */
+    .hero { padding: 80px 40px 60px; text-align: center; max-width: 700px; margin: 0 auto; }
+    .hero h1 { font-size: 36px; font-weight: 500; color: #fff; letter-spacing: -0.5px; margin-bottom: 12px; line-height: 1.2; }
+    .hero h1 span { color: #22c55e; }
+    .hero p { font-size: 15px; color: #666; margin-bottom: 32px; line-height: 1.6; }
+
+    /* SEARCH */
+    .search-wrap { max-width: 680px; margin: 0 auto 60px; padding: 0 40px; }
+    .search-box { display: flex; gap: 8px; }
+    .search-box input { flex: 1; background: #111; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 12px 16px; color: #e8e8e8; font-size: 14px; font-family: 'Courier New', monospace; }
+    .search-box input:focus { outline: none; border-color: #22c55e; }
+    .search-box input::placeholder { color: #444; }
+    .search-box select { background: #111; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 0 12px; color: #666; font-size: 13px; font-family: inherit; cursor: pointer; }
+    .search-box select:focus { outline: none; }
+    .search-btn { background: #22c55e; color: #000; border: none; border-radius: 8px; padding: 0 24px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .search-btn:hover { background: #16a34a; }
+
+    /* STATS */
+    .stats { display: flex; justify-content: center; gap: 48px; padding: 40px; border-top: 0.5px solid #1a1a1a; border-bottom: 0.5px solid #1a1a1a; margin-bottom: 60px; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 24px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+    .stat-label { font-size: 12px; color: #555; }
+
+    /* FEATURES */
+    .features { max-width: 900px; margin: 0 auto; padding: 0 40px 80px; }
+    .features-title { font-size: 13px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; margin-bottom: 32px; }
+    .features-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .feature { background: #0e0e0e; border: 0.5px solid #1e1e1e; border-radius: 10px; padding: 20px; }
+    .feature-icon { font-size: 20px; margin-bottom: 10px; }
+    .feature-title { font-size: 13px; font-weight: 500; color: #e8e8e8; margin-bottom: 6px; }
+    .feature-desc { font-size: 12px; color: #555; line-height: 1.6; }
+
+    /* FOOTER */
+    footer { border-top: 0.5px solid #1a1a1a; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+    footer span { font-size: 12px; color: #444; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Part<span>Bridge</span></div>
+  <div class="nav-links">
+    <a href="index.html">Search</a>
+    <a href="dashboard.html">List inventory</a>
+    <button class="nav-btn" onclick="window.location.href='signup.html'">Sign in</button>
+    <button class="nav-btn primary" onclick="window.location.href='signup.html'">Join free</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Find electronic components<br /><span>faster than anyone else</span></h1>
+  <p>Search stocked and brokered inventory from verified suppliers worldwide. Real contact info, no middlemen.</p>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search part number e.g. TMS320F28335PGFA" onkeydown="if(event.key==='Enter') doSearch()" />
+    <select id="regionFilter">
+      <option value="">All regions</option>
+      <option value="Americas">Americas</option>
+      <option value="Europe">Europe</option>
+      <option value="Asia">Asia</option>
+    </select>
+    <button class="search-btn" onclick="doSearch()">Search →</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num" id="statParts">—</div><div class="stat-label">Parts indexed</div></div>
+  <div class="stat"><div class="stat-num" id="statSuppliers">—</div><div class="stat-label">Verified suppliers</div></div>
+  <div class="stat"><div class="stat-num" id="statListings">—</div><div class="stat-label">Active listings</div></div>
+</div>
+
+<div class="features">
+  <div class="features-title">Why PartBridge</div>
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Stocked vs brokered</div>
+      <div class="feature-desc">Every listing clearly flags whether the supplier physically has the part or is brokering it. No more guessing.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">✓</div>
+      <div class="feature-title">Verified suppliers</div>
+      <div class="feature-desc">Suppliers are rated on responsiveness, quoting, part quality, and return handling. Real reviews from real buyers.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">◎</div>
+      <div class="feature-title">AI market intelligence</div>
+      <div class="feature-desc">Search demand signals, market trends, and price spreads. Know the market before you make contact.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Part<strong>Bridge</strong></span>
+  <span id="footerCount">Loading inventory data...</span>
+</footer>
+
+<script>
+  const SUPABASE_URL = 'https://zcqfwkbgrevaixqjytzc.supabase.co'
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcWZ3a2JncmV2YWl4cWp5dHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDkzMDUsImV4cCI6MjA5NTEyNTMwNX0.euaNHnoN0KoG23IRCBcK2x2K-OgB4opFF9dZRsoFAds'
+
+  async function loadStats() {
+    try {
+      const [partsRes, suppliersRes, listingsRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/parts?select=count`, { headers: { 'apikey': ANON_KEY, 'Prefer': 'count=exact', 'Range': '0-0' } }),
+        fetch(`${SUPABASE_URL}/rest/v1/suppliers?select=count`, { headers: { 'apikey': ANON_KEY, 'Prefer': 'count=exact', 'Range': '0-0' } }),
+        fetch(`${SUPABASE_URL}/rest/v1/listings?select=count&active=eq.true`, { headers: { 'apikey': ANON_KEY, 'Prefer': 'count=exact', 'Range': '0-0' } })
+      ])
+      const parts = partsRes.headers.get('content-range')?.split('/')[1] || '0'
+      const suppliers = suppliersRes.headers.get('content-range')?.split('/')[1] || '0'
+      const listings = listingsRes.headers.get('content-range')?.split('/')[1] || '0'
+      document.getElementById('statParts').textContent = parseInt(parts).toLocaleString()
+      document.getElementById('statSuppliers').textContent = parseInt(suppliers).toLocaleString()
+      document.getElementById('statListings').textContent = parseInt(listings).toLocaleString()
+      document.getElementById('footerCount').textContent = `${parseInt(listings).toLocaleString()} active listings · Updated live`
+    } catch(e) {
+      document.getElementById('statParts').textContent = '—'
+    }
+  }
+
+  function doSearch() {
+    const query = document.getElementById('searchInput').value.trim()
+    const region = document.getElementById('regionFilter').value
+    if (!query) return
+    window.location.href = `results.html?q=${encodeURIComponent(query)}&region=${encodeURIComponent(region)}`
+  }
+
+  loadStats()
+</script>
+</body>
+</html>

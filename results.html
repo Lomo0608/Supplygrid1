@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SupplyGrid — Search Results</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e8; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; border-bottom: 0.5px solid #1e1e1e; background: #0a0a0a; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-size: 15px; font-weight: 500; color: #fff; cursor: pointer; }
+    .nav-logo span { color: #22c55e; }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a { font-size: 13px; color: #666; }
+    .nav-btn { font-size: 12px; padding: 6px 16px; border-radius: 6px; border: 0.5px solid #333; background: transparent; color: #e8e8e8; cursor: pointer; font-family: inherit; }
+    .nav-btn.primary { background: #22c55e; color: #000; border-color: #22c55e; font-weight: 500; }
+
+    .search-bar { background: #0d0d0d; border-bottom: 0.5px solid #1e1e1e; padding: 12px 40px; display: flex; gap: 8px; }
+    .search-bar input { flex: 1; background: #111; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 10px 14px; color: #e8e8e8; font-size: 13px; font-family: 'Courier New', monospace; }
+    .search-bar input:focus { outline: none; border-color: #22c55e; }
+    .search-bar select { background: #111; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 0 12px; color: #666; font-size: 13px; font-family: inherit; cursor: pointer; }
+    .search-btn { background: #22c55e; color: #000; border: none; border-radius: 8px; padding: 0 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .main { max-width: 1100px; margin: 0 auto; padding: 24px 40px; }
+
+    .intel-wrapper { position: relative; margin-bottom: 20px; border-radius: 8px; overflow: hidden; }
+    .intel-bar { background: #0e0e0e; border: 0.5px solid #1e1e1e; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; }
+    .intel-bar.blurred { filter: blur(5px); user-select: none; pointer-events: none; }
+    .intel-item { flex: 1; padding: 0 16px; border-right: 0.5px solid #1e1e1e; }
+    .intel-item:first-child { padding-left: 0; }
+    .intel-item:last-child { border-right: none; }
+    .intel-label { font-size: 10px; color: #555; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .intel-val { font-size: 13px; font-weight: 500; color: #e8e8e8; }
+    .intel-val.up { color: #22c55e; }
+    .intel-gate { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(10,10,10,0.6); border-radius: 8px; }
+    .intel-gate-text { font-size: 13px; color: #e8e8e8; font-weight: 500; }
+    .intel-gate-text span { color: #666; font-weight: 400; }
+    .unlock-btn { font-size: 12px; padding: 6px 16px; border-radius: 6px; background: #e8e8e8; color: #000; border: none; cursor: pointer; font-weight: 500; font-family: inherit; }
+
+    .part-header { margin-bottom: 18px; }
+    .part-number { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+    .part-desc { font-size: 13px; color: #666; margin-bottom: 8px; }
+    .part-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+    .badge-mfr { background: #141414; color: #888; border: 0.5px solid #222; font-family: monospace; }
+    .badge-demand { background: #0d1f0d; color: #22c55e; }
+
+    .section-label { font-size: 11px; font-weight: 500; color: #555; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 0 6px; border-bottom: 0.5px solid #1e1e1e; display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .dot-stocked { background: #22c55e; }
+    .dot-brokered { background: #f97316; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+    th { font-size: 11px; color: #555; font-weight: 500; text-align: left; padding: 8px 10px; border-bottom: 0.5px solid #1e1e1e; letter-spacing: 0.3px; }
+    td { padding: 10px 10px; border-bottom: 0.5px solid #141414; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #0e0e0e; cursor: pointer; }
+
+    .supplier-name { font-weight: 500; font-size: 13px; color: #e8e8e8; display: flex; align-items: center; gap: 5px; }
+    .check { color: #22c55e; font-size: 12px; }
+    .mono { font-family: 'Courier New', monospace; font-size: 12px; color: #888; }
+    .qty { font-family: 'Courier New', monospace; font-size: 13px; color: #e8e8e8; }
+    .stars { color: #facc15; font-size: 11px; letter-spacing: -1px; }
+    .rating-num { font-size: 11px; color: #555; margin-left: 2px; }
+    .pn-variant { font-size: 10px; color: #555; font-family: monospace; margin-top: 2px; }
+
+    .contact-btn { font-size: 12px; padding: 5px 12px; cursor: pointer; border-radius: 6px; background: transparent; border: 0.5px solid #2a2a2a; color: #e8e8e8; font-family: inherit; white-space: nowrap; }
+    .contact-btn:hover { background: #141414; }
+    .contact-btn.active { background: #e8e8e8; color: #000; border-color: #e8e8e8; }
+
+    .drawer { display: none; background: #0e0e0e; border: 0.5px solid #1e1e1e; border-radius: 10px; padding: 16px 18px; margin: 4px 0 8px; }
+    .drawer.open { display: block; }
+    .drawer-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+    .drawer-name { font-size: 14px; font-weight: 500; color: #e8e8e8; display: flex; align-items: center; gap: 6px; }
+    .drawer-close { font-size: 18px; color: #555; cursor: pointer; background: none; border: none; font-family: inherit; line-height: 1; }
+    .drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .drawer-field { display: flex; flex-direction: column; gap: 2px; }
+    .drawer-field-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.4px; }
+    .drawer-field-val { font-size: 13px; color: #e8e8e8; }
+    .drawer-rating { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; border-top: 0.5px solid #1e1e1e; padding-top: 12px; }
+    .rating-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+    .rating-row-label { color: #888; }
+    .rating-bar-wrap { flex: 1; margin: 0 10px; height: 4px; background: #1e1e1e; border-radius: 2px; overflow: hidden; }
+    .rating-bar { height: 100%; border-radius: 2px; background: #facc15; }
+    .rating-row-score { color: #e8e8e8; font-family: monospace; font-size: 11px; min-width: 24px; text-align: right; }
+    .drawer-actions { display: flex; gap: 8px; border-top: 0.5px solid #1e1e1e; padding-top: 12px; }
+    .email-btn { flex: 1; font-size: 13px; font-weight: 500; padding: 9px 0; border-radius: 6px; background: #e8e8e8; color: #000; border: none; cursor: pointer; font-family: inherit; text-align: center; text-decoration: none; display: block; }
+    .email-btn:hover { background: #fff; }
+    .phone-btn { font-size: 13px; padding: 9px 16px; border-radius: 6px; background: transparent; border: 0.5px solid #2a2a2a; color: #e8e8e8; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+    .gate { border: 0.5px solid #1e1e1e; border-radius: 10px; padding: 14px 18px; margin-top: 18px; display: flex; align-items: center; justify-content: space-between; background: #0e0e0e; }
+    .gate-text { font-size: 13px; color: #666; }
+    .gate-text strong { color: #e8e8e8; }
+    .join-btn { font-size: 12px; padding: 7px 18px; border-radius: 6px; background: #22c55e; color: #000; border: none; cursor: pointer; font-weight: 500; font-family: inherit; white-space: nowrap; }
+
+    .loading { text-align: center; padding: 60px 0; color: #555; font-size: 14px; }
+    .empty { text-align: center; padding: 60px 0; color: #555; font-size: 14px; }
+
+    footer { border-top: 0.5px solid #1a1a1a; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+    footer span { font-size: 12px; color: #444; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="window.location.href='index.html'">Supply<span>Grid</span></div>
+  <div class="nav-links">
+    <a href="index.html">Search</a>
+    <a href="dashboard.html">List inventory</a>
+    <button class="nav-btn" onclick="window.location.href='signup.html'">Sign in</button>
+    <button class="nav-btn primary" onclick="window.location.href='signup.html'">Join free</button>
+  </div>
+</nav>
+
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search part number..." onkeydown="if(event.key==='Enter') doSearch()" />
+  <select id="regionFilter">
+    <option value="">All regions</option>
+    <option value="Americas">Americas</option>
+    <option value="Europe">Europe</option>
+    <option value="Asia">Asia</option>
+  </select>
+  <select id="typeFilter">
+    <option value="">All types</option>
+    <option value="stocked">Stocked</option>
+    <option value="brokered">Brokered</option>
+  </select>
+  <button class="search-btn" onclick="doSearch()">Search →</button>
+</div>
+
+<div class="main">
+  <div class="intel-wrapper">
+    <div class="intel-bar blurred" aria-hidden="true">
+      <div class="intel-item"><div class="intel-label">AI demand signal</div><div class="intel-val up" id="intel-demand">— searches</div></div>
+      <div class="intel-item"><div class="intel-label">Market trend</div><div class="intel-val up">↑ Loading...</div></div>
+      <div class="intel-item"><div class="intel-label">Avg time to source</div><div class="intel-val">3 – 7 days</div></div>
+      <div class="intel-item"><div class="intel-label">Price spread</div><div class="intel-val">Members only</div></div>
+      <div class="intel-item"><div class="intel-label">Total supply</div><div class="intel-val" id="intel-supply">Loading...</div></div>
+    </div>
+    <div class="intel-gate">
+      <div class="intel-gate-text">AI market intelligence <span>— members only</span></div>
+      <button class="unlock-btn" onclick="window.location.href='signup.html'">Unlock free →</button>
+    </div>
+  </div>
+
+  <div id="partHeader" class="part-header" style="display:none">
+    <div class="part-number" id="partNum">—</div>
+    <div class="part-desc" id="partDesc">—</div>
+    <div class="part-badges">
+      <span class="badge badge-mfr" id="partMfr">—</span>
+      <span class="badge badge-demand" id="demandBadge">● Loading</span>
+    </div>
+  </div>
+
+  <div id="resultsWrap">
+    <div class="loading" id="loadingMsg">Searching...</div>
+  </div>
+
+  <div class="gate" id="memberGate" style="display:none">
+    <div class="gate-text"><strong id="gateCount">More suppliers found</strong> — join free for full results and AI outreach</div>
+    <button class="join-btn" onclick="window.location.href='signup.html'">Join free →</button>
+  </div>
+</div>
+
+<footer>
+  <span>Part<span style="font-weight:600">Bridge</span></span>
+  <span>Real inventory · Real suppliers · No middlemen</span>
+</footer>
+
+<script>
+  const SUPABASE_URL = 'https://zcqfwkbgrevaixqjytzc.supabase.co'
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcWZ3a2JncmV2YWl4cWp5dHpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDkzMDUsImV4cCI6MjA5NTEyNTMwNX0.euaNHnoN0KoG23IRCBcK2x2K-OgB4opFF9dZRsoFAds'
+
+  const params = new URLSearchParams(window.location.search)
+  const query = params.get('q') || ''
+  const region = params.get('region') || ''
+
+  document.getElementById('searchInput').value = query
+  if (region) document.getElementById('regionFilter').value = region
+
+  function doSearch() {
+    const q = document.getElementById('searchInput').value.trim()
+    const r = document.getElementById('regionFilter').value
+    const t = document.getElementById('typeFilter').value
+    if (!q) return
+    window.location.href = `results.html?q=${encodeURIComponent(q)}&region=${encodeURIComponent(r)}&type=${encodeURIComponent(t)}`
+  }
+
+  function stars(rating) {
+    const full = Math.round(rating)
+    return '★'.repeat(full) + '☆'.repeat(5 - full)
+  }
+
+  function countryFlag(country) {
+    const flags = { US: '🇺🇸', KR: '🇰🇷', DE: '🇩🇪', SG: '🇸🇬', GB: '🇬🇧', JP: '🇯🇵', CN: '🇨🇳', TW: '🇹🇼', IN: '🇮🇳', FR: '🇫🇷' }
+    return flags[country] || '🌐'
+  }
+
+  let openDrawer = null
+
+  function toggleDrawer(id) {
+    if (openDrawer && openDrawer !== id) {
+      document.getElementById('drawer-' + openDrawer).classList.remove('open')
+      document.getElementById('btn-' + openDrawer).classList.remove('active')
+      document.getElementById('btn-' + openDrawer).textContent = 'Contact'
+      document.getElementById('drawerRow-' + openDrawer).style.display = 'none'
+    }
+    const drawer = document.getElementById('drawer-' + id)
+    const btn = document.getElementById('btn-' + id)
+    const row = document.getElementById('drawerRow-' + id)
+    const isOpen = drawer.classList.contains('open')
+    if (isOpen) {
+      drawer.classList.remove('open')
+      btn.classList.remove('active')
+      btn.textContent = 'Contact'
+      row.style.display = 'none'
+      openDrawer = null
+    } else {
+      drawer.classList.add('open')
+      btn.classList.add('active')
+      btn.textContent = 'Close'
+      row.style.display = 'table-row'
+      openDrawer = id
+    }
+  }
+
+  function buildTable(suppliers, type) {
+    if (!suppliers.length) return ''
+    const dotClass = type === 'stocked' ? 'dot-stocked' : 'dot-brokered'
+    const label = type === 'stocked' ? 'Stocked inventory' : 'Brokered inventory'
+
+    let rows = suppliers.map((s, i) => {
+      const id = `${type}-${i}`
+      const avgRating = ((s.rating_responsiveness + s.rating_quoted + s.rating_quality + s.rating_returns) / 4).toFixed(1)
+      const flag = countryFlag(s.country)
+      return `
+        <tr onclick="toggleDrawer('${id}')">
+          <td><div style="font-family:monospace;font-size:12px;font-weight:500;color:#e8e8e8">${query.toUpperCase()}</div></td>
+          <td><div class="supplier-name">${s.company_name} ${s.verified ? '<span class="check">✓</span>' : ''}</div></td>
+          <td class="mono">—</td>
+          <td class="mono">${flag} ${s.country}</td>
+          <td class="qty">—</td>
+          <td><span class="stars">${stars(parseFloat(avgRating))}</span><span class="rating-num">${avgRating} (${s.review_count})</span></td>
+          <td style="text-align:right"><button class="contact-btn" id="btn-${id}" onclick="event.stopPropagation();toggleDrawer('${id}')">Contact</button></td>
+        </tr>
+        <tr id="drawerRow-${id}" style="display:none">
+          <td colspan="7" style="padding:0 0 8px 0">
+            <div class="drawer" id="drawer-${id}">
+              <div class="drawer-top">
+                <div class="drawer-name">${s.company_name} ${s.verified ? '<span class="check">✓</span>' : ''}</div>
+                <button class="drawer-close" onclick="toggleDrawer('${id}')">×</button>
+              </div>
+              <div class="drawer-grid">
+                <div class="drawer-field"><div class="drawer-field-label">Location</div><div class="drawer-field-val">${flag} ${s.country} · ${s.region}</div></div>
+                <div class="drawer-field"><div class="drawer-field-label">Type</div><div class="drawer-field-val">${type === 'stocked' ? 'Stocked' : 'Brokered'} ${s.verified ? '· Verified' : ''}</div></div>
+                <div class="drawer-field"><div class="drawer-field-label">Member since</div><div class="drawer-field-val">${new Date(s.created_at).getFullYear()}</div></div>
+                <div class="drawer-field"><div class="drawer-field-label">Reviews</div><div class="drawer-field-val">${s.review_count} reviews</div></div>
+              </div>
+              <div class="drawer-rating">
+                <div class="rating-row"><span class="rating-row-label">Responsiveness</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:${s.rating_responsiveness * 20}%"></div></div><span class="rating-row-score">${s.rating_responsiveness}</span></div>
+                <div class="rating-row"><span class="rating-row-label">Quoted the customer</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:${s.rating_quoted * 20}%"></div></div><span class="rating-row-score">${s.rating_quoted}</span></div>
+                <div class="rating-row"><span class="rating-row-label">Part quality</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:${s.rating_quality * 20}%"></div></div><span class="rating-row-score">${s.rating_quality}</span></div>
+                <div class="rating-row"><span class="rating-row-label">Return handling</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:${s.rating_returns * 20}%"></div></div><span class="rating-row-score">${s.rating_returns}</span></div>
+              </div>
+              <div class="drawer-actions">
+                <a class="email-btn" href="mailto:${s.email}?subject=RFQ: ${query.toUpperCase()}&body=Hi ${s.company_name},%0D%0A%0D%0AI am looking to source ${query.toUpperCase()}. Please send your best quote including availability and lead time.%0D%0A%0D%0AThank you">✉ Email for quote</a>
+                ${s.phone ? `<button class="phone-btn">📞 ${s.phone}</button>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>
+      `
+    }).join('')
+
+    return `
+      <div class="section-label"><span class="dot ${dotClass}"></span>${label}</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:22%">Part number</th>
+            <th style="width:20%">Supplier</th>
+            <th style="width:9%">DC</th>
+            <th style="width:11%">CTR</th>
+            <th style="width:9%">Qty</th>
+            <th style="width:18%">Rating</th>
+            <th style="width:11%"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `
+  }
+
+  async function search() {
+    if (!query) {
+      document.getElementById('loadingMsg').textContent = 'Enter a part number to search.'
+      return
+    }
+
+    try {
+      // Look up part reference data
+      const partRes = await fetch(`${SUPABASE_URL}/functions/v1/rapid-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+        body: JSON.stringify({ partNumber: query })
+      })
+      const partData = await partRes.json()
+
+      if (partData.part) {
+        document.getElementById('partHeader').style.display = 'block'
+        document.getElementById('partNum').textContent = partData.part.part_number
+        document.getElementById('partDesc').textContent = partData.part.description || '—'
+        document.getElementById('partMfr').textContent = partData.part.manufacturer || '—'
+        document.getElementById('demandBadge').textContent = `● ${partData.part.search_count} searches`
+        document.getElementById('intel-demand').textContent = `${partData.part.search_count} searches · Active`
+      }
+
+      // Get suppliers from listings
+      let listingsUrl = `${SUPABASE_URL}/rest/v1/listings?select=*,suppliers(*)&active=eq.true&part_number_listed=ilike.${query}*`
+      if (region) listingsUrl += `&suppliers.region=eq.${region}`
+
+      const listRes = await fetch(listingsUrl, {
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+      })
+      const listings = await listRes.json()
+
+      // Also get all suppliers for now since listings may not have data yet
+      const suppRes = await fetch(`${SUPABASE_URL}/rest/v1/suppliers?select=*`, {
+        headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+      })
+      const suppliers = await suppRes.json()
+
+      document.getElementById('loadingMsg').style.display = 'none'
+
+      if (!suppliers.length) {
+        document.getElementById('resultsWrap').innerHTML = '<div class="empty">No suppliers found for this part number yet. Be the first to list it.</div>'
+        return
+      }
+
+      const stocked = suppliers.filter(s => s.member_tier !== null)
+      const brokered = []
+
+      let html = ''
+      if (stocked.length) html += buildTable(stocked, 'stocked')
+      if (brokered.length) html += buildTable(brokered, 'brokered')
+
+      document.getElementById('resultsWrap').innerHTML = html
+      document.getElementById('intel-supply').textContent = `${suppliers.length} suppliers found`
+
+      if (suppliers.length > 3) {
+        document.getElementById('memberGate').style.display = 'flex'
+        document.getElementById('gateCount').textContent = `${suppliers.length - 3} more suppliers found`
+      }
+
+    } catch(err) {
+      document.getElementById('loadingMsg').textContent = 'Search failed. Please try again.'
+      console.error(err)
+    }
+  }
+
+  search()
+</script>
+</body>
+</html>
