@@ -265,7 +265,7 @@
                 <div class="rating-row"><span class="rating-row-label">Return handling</span><div class="rating-bar-wrap"><div class="rating-bar" style="width:${s.rating_returns * 20}%"></div></div><span class="rating-row-score">${s.rating_returns}</span></div>
               </div>
               <div class="drawer-actions">
-                <a class="email-btn" href="mailto:${s.email}?subject=RFQ: ${query.toUpperCase()}&body=Hi ${s.company_name},%0D%0A%0D%0AI am looking to source ${query.toUpperCase()}. Please send your best quote including availability and lead time.%0D%0A%0D%0AThank you">✉ Email for quote</a>
+                <a class="email-btn" href="mailto:${s.email}?subject=RFQ: ${query.toUpperCase()}&body=Hi ${s.company_name},%0D%0A%0D%0AI am looking to source ${query.toUpperCase()}. Please send your best quote including availability and lead time.%0D%0A%0D%0AThank you" onclick="logContact('${s.id}', '${s.email}')">✉ Email for quote</a>
                 ${s.phone ? `<button class="phone-btn">📞 ${s.phone}</button>` : ''}
               </div>
             </div>
@@ -358,6 +358,23 @@
       document.getElementById('loadingMsg').textContent = 'Search failed. Please try again.'
       console.error(err)
     }
+  }
+
+  async function logContact(supplierId, supplierEmail) {
+    try {
+      const { data: { session } } = await (async () => {
+        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
+        const c = createClient(SUPABASE_URL, ANON_KEY)
+        return c.auth.getSession()
+      })()
+      const buyerEmail = session?.user?.email || prompt('Enter your email to receive a review request after your transaction:')
+      if (!buyerEmail) return
+      await fetch(`${SUPABASE_URL}/functions/v1/log-contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}` },
+        body: JSON.stringify({ buyer_email: buyerEmail, supplier_id: supplierId, part_number: query })
+      })
+    } catch(e) { console.log('Contact log failed silently', e) }
   }
 
   search()
