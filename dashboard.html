@@ -111,6 +111,7 @@
   <div class="nav-logo" onclick="window.location.href='index.html'">Supply<span>Grid</span></div>
   <div class="nav-right">
     <span class="nav-user" id="navUser"></span>
+    <button class="nav-btn" onclick="window.location.href='index.html'">Search parts</button>
     <button class="nav-btn" onclick="doSignout()">Sign out</button>
   </div>
 </nav>
@@ -211,11 +212,8 @@
       </div>
       <div class="field">
         <label>Part number</label>
-        <div class="input-row">
-          <input class="mono" type="text" id="partNumber" placeholder="e.g. TMS320F28335PGFA" oninput="this.value=this.value.toUpperCase()" />
-          <button class="lookup-btn" onclick="lookupPart()">Look up →</button>
-        </div>
-        <div class="field-hint">Include full suffix — TR, T, REEL</div>
+        <input class="mono" type="text" id="partNumber" placeholder="e.g. TMS320F28335PGFA" oninput="this.value=this.value.toUpperCase(); debounceLookup()" />
+        <div class="field-hint">Include full suffix — TR, T, REEL · We look up details automatically</div>
       </div>
       <div class="part-preview" id="partPreview">
         <div class="pp-label">✓ Part verified</div>
@@ -427,6 +425,14 @@
     loadListings()
   }
 
+  let lookupTimer = null
+  function debounceLookup() {
+    clearTimeout(lookupTimer)
+    const val = document.getElementById('partNumber').value.trim()
+    if (val.length < 4) return
+    lookupTimer = setTimeout(() => lookupPart(), 600)
+  }
+
   async function lookupPart() {
     const partNumber = document.getElementById('partNumber').value.trim()
     if (!partNumber) return
@@ -483,24 +489,60 @@
 
   async function loadListings() {
     if (!currentUser) return
-    const { data: listings } = await client.from('listings').select('*, parts(part_number, manufacturer, description)').eq('supplier_id', currentUser.id).eq('active', true).order('created_at', { ascending: false })
-    if (!listings) return
+    document.getElementById('listingsTable').innerHTML = '<div class="empty-state">Loading...</div>'
+
+    const { data: listings, error } = await client
+      .from('listings')
+      .select('id, part_number_listed, inventory_type, quantity, date_code, created_at, part_id')
+      .eq('supplier_id', currentUser.id)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      document.getElementById('listingsTable').innerHTML = '<div class="empty-state">Could not load listings: ' + error.message + '</div>'
+      return
+    }
+
+    if (!listings || !listings.length) {
+      document.getElementById('statActive').textContent = '0'
+      document.getElementById('statStocked').textContent = '0'
+      document.getElementById('statBrokered').textContent = '0'
+      document.getElementById('listingsTable').innerHTML = '<div class="empty-state">No listings yet. Post your first listing above.</div>'
+      return
+    }
+
+    // Fetch part details separately
+    const partIds = [...new Set(listings.map(l => l.part_id).filter(Boolean))]
+    let partsMap = {}
+    if (partIds.length) {
+      const { data: parts } = await client.from('parts').select('id, part_number, manufacturer').in('id', partIds)
+      if (parts) parts.forEach(p => partsMap[p.id] = p)
+    }
+
     document.getElementById('statActive').textContent = listings.length
     document.getElementById('statStocked').textContent = listings.filter(l => l.inventory_type === 'stocked').length
     document.getElementById('statBrokered').textContent = listings.filter(l => l.inventory_type === 'brokered').length
-    if (!listings.length) { document.getElementById('listingsTable').innerHTML = '<div class="empty-state">No listings yet.</div>'; return }
-    const rows = listings.map(l => `
-      <tr>
-        <td style="font-family:monospace;font-size:12px">${l.part_number_listed}</td>
-        <td style="font-size:12px;color:#888">${l.parts?.manufacturer || '—'}</td>
-        <td class="mono-sm">${l.date_code || '—'}</td>
-        <td style="font-family:monospace;font-size:13px">${l.quantity?.toLocaleString() || '—'}</td>
-        <td><span class="badge badge-${l.inventory_type}">${l.inventory_type}</span></td>
-        <td style="font-size:11px;color:#555">${new Date(l.created_at).toLocaleDateString()}</td>
-        <td><button class="delete-btn" onclick="deleteListing('${l.id}')">Remove</button></td>
-      </tr>
-    `).join('')
-    document.getElementById('listingsTable').innerHTML = `<table><thead><tr><th>Part number</th><th>MFR</th><th>DC</th><th>Qty</th><th>Type</th><th>Posted</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+
+    const rows = listings.map(l => {
+      const part = partsMap[l.part_id]
+      return `
+        <tr>
+          <td style="font-family:monospace;font-size:12px">${l.part_number_listed}</td>
+          <td style="font-size:12px;color:#888">${part?.manufacturer || '—'}</td>
+          <td class="mono-sm">${l.date_code || '—'}</td>
+          <td style="font-family:monospace;font-size:13px">${l.quantity?.toLocaleString() || '—'}</td>
+          <td><span class="badge badge-${l.inventory_type}">${l.inventory_type}</span></td>
+          <td style="font-size:11px;color:#555">${new Date(l.created_at).toLocaleDateString()}</td>
+          <td><button class="delete-btn" onclick="deleteListing('${l.id}')">Remove</button></td>
+        </tr>
+      `
+    }).join('')
+
+    document.getElementById('listingsTable').innerHTML = `
+      <table>
+        <thead><tr><th>Part number</th><th>MFR</th><th>DC</th><th>Qty</th><th>Type</th><th>Posted</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
   }
 
   async function deleteListing(id) {
